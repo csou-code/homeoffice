@@ -93,7 +93,7 @@ Views.login = function () {
   ];
   return `<div class="login">
     <div class="login-card">
-      <div class="brand big"><span class="logo">L</span><div><strong>LUSIS AVOCATS</strong><small>Télétravail &amp; bureaux</small></div></div>
+      <div class="brand big"><img src="img/logo.png" alt="LUSIS AVOCATS – Spécialistes en droit social"><span class="app-name">Télétravail<br>&amp; bureaux</span></div>
       <h1>Connexion</h1>
       <div class="ms-btn" aria-hidden="true"><span class="ms-logo"><i></i><i></i><i></i><i></i></span>Se connecter avec Microsoft</div>
       <p class="muted">Preuve de concept : la connexion Microsoft (Entra ID) est simulée. Choisissez un compte de démonstration pour découvrir l'application selon chaque profil.</p>
@@ -110,7 +110,7 @@ Views.shell = function (content) {
   if (me.role === 'associe') tabs.push(['admin', 'Administration']);
   return `<header class="topbar">
     <div class="topbar-row">
-      <a class="brand" href="#calendar"><span class="logo">L</span><div><strong>LUSIS AVOCATS</strong><small>Télétravail &amp; bureaux</small></div></a>
+      <a class="brand" href="#calendar"><img src="img/logo.png" alt="LUSIS AVOCATS"><span class="app-name">Télétravail<br>&amp; bureaux</span></a>
       <div class="top-actions">
         <a href="#notifications" class="icon-btn bell ${App.route === 'notifications' ? 'active' : ''}" aria-label="Notifications (${unread} non lues)">${ICONS.bell}${unread ? `<span class="dot">${unread > 99 ? '99+' : unread}</span>` : ''}</a>
         <div class="me">${avatar(me)}<div class="me-txt"><strong>${esc(fullName(me))}</strong><small>${esc(Rules.regimeLabel(me))}</small></div></div>

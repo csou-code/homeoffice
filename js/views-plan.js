@@ -38,9 +38,9 @@ Views.floorPlan = function (d) {
         tip = `${dk.label} – ${fullName(u)} : ${r ? 'télétravail' : 'au cabinet'}`;
       } else if (u) { st = 'closed'; tip = `${dk.label} – ${fullName(u)}`; }
       return `<g class="office ${st}" data-tip="${esc(tip)}"><rect x="${dk.x}" y="${dk.y}" width="${dk.w}" height="${dk.h}" rx="6"/>
-        <text x="${dk.x + 8}" y="${dk.y + 20}" class="lbl">${dk.label}</text>
-        ${u ? `<text x="${dk.x + dk.w / 2}" y="${dk.y + 70}" text-anchor="middle" class="nm">${esc(shortName(u))}</text>` : ''}
-        ${u && biz ? `<text x="${dk.x + dk.w / 2}" y="${dk.y + 90}" text-anchor="middle" class="st">${st === 'remote' ? 'Télétravail' : 'Présent'}</text>` : ''}</g>`;
+        <text x="${dk.x + 7}" y="${dk.y + 16}" class="lbl">${dk.label}</text>
+        ${u ? `<text x="${dk.x + dk.w / 2}" y="${dk.y + Math.round(dk.h * 0.58)}" text-anchor="middle" class="nm">${esc(shortName(u))}</text>` : ''}
+        ${u && biz ? `<text x="${dk.x + dk.w / 2}" y="${dk.y + Math.round(dk.h * 0.84)}" text-anchor="middle" class="st">${st === 'remote' ? 'Télétravail' : 'Présent'}</text>` : ''}</g>`;
     }
     const b = biz && Rules.deskBooking(dk.id, d);
     const mine = b && b.userId === me.id;
@@ -52,11 +52,12 @@ Views.floorPlan = function (d) {
       <text x="${dk.x + dk.w / 2}" y="${dk.y + 26}" text-anchor="middle" class="lbl">${dk.label}</text>
       <text x="${dk.x + dk.w / 2}" y="${dk.y + 48}" text-anchor="middle" class="nm">${who ? esc(shortName(who)) : biz ? 'Libre' : ''}</text></g>`;
   }).join('');
-  return `<div class="plan-wrap"><svg viewBox="0 0 1000 560" class="plan" role="img" aria-label="Plan des locaux">
-    <rect x="2" y="2" width="996" height="556" rx="12" class="floor"/>
-    <rect x="13" y="160" width="210" height="240" rx="8" class="room"/><text x="118" y="285" text-anchor="middle" class="room-lbl">Accueil</text>
-    <rect x="240" y="160" width="500" height="240" rx="8" class="room open"/><text x="490" y="190" text-anchor="middle" class="room-lbl">Espace partagé – bureaux volants</text>
-    <rect x="757" y="160" width="230" height="240" rx="8" class="room"/><text x="872" y="285" text-anchor="middle" class="room-lbl">Salle de réunion</text>
+  return `<div class="plan-wrap"><svg viewBox="0 0 1000 640" class="plan" role="img" aria-label="Plan des locaux">
+    <rect x="2" y="2" width="996" height="636" rx="10" class="floor"/>
+    <rect x="133" y="125" width="180" height="390" rx="6" class="room"/><text x="223" y="325" text-anchor="middle" class="room-lbl">Accueil</text>
+    <rect x="325" y="125" width="330" height="390" rx="6" class="room open"/><text x="490" y="160" text-anchor="middle" class="room-lbl">Espace partagé</text><text x="490" y="178" text-anchor="middle" class="room-sub">bureaux volants</text>
+    <path d="M637 497 L637 515 L655 515 Z" class="corner"/>
+    <rect x="667" y="125" width="200" height="390" rx="6" class="room"/><text x="767" y="325" text-anchor="middle" class="room-lbl">Salle de réunion</text>
     ${shapes}</svg></div>`;
 };
 

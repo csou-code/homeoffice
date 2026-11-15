@@ -1,5 +1,5 @@
 /* Données fictives de démonstration (générées de façon déterministe par rapport à la date du jour). */
-const SEED_VERSION = 4;
+const SEED_VERSION = 5;
 
 function mulberry32(a) {
   return function () {
@@ -15,11 +15,14 @@ function buildSeed() {
   const pick = a => a[Math.floor(rnd() * a.length)];
   const t = D.today();
 
-  /* Plan des locaux : 20 bureaux attitrés + 5 bureaux volants */
+  /* Plan des locaux : 36 bureaux attitrés (12 en haut, 12 en bas, 6 de chaque côté) + 4 bureaux volants */
   const desks = [];
-  for (let i = 0; i < 10; i++) desks.push({ id: `B${D.pad(i + 1)}`, label: `B${D.pad(i + 1)}`, type: 'office', x: 13 + i * 98, y: 16, w: 92, h: 120 });
-  for (let i = 0; i < 10; i++) desks.push({ id: `B${D.pad(i + 11)}`, label: `B${D.pad(i + 11)}`, type: 'office', x: 13 + i * 98, y: 424, w: 92, h: 120 });
-  for (let i = 0; i < 5; i++) desks.push({ id: `V${i + 1}`, label: `V${i + 1}`, type: 'floating', x: 262 + i * 92, y: 250, w: 72, h: 66 });
+  const office = (n, x, y, w, h) => desks.push({ id: `B${D.pad(n)}`, label: `B${D.pad(n)}`, type: 'office', x, y, w, h });
+  for (let i = 0; i < 12; i++) office(i + 1, 11 + i * 82, 12, 76, 100);
+  for (let i = 0; i < 6; i++) office(13 + i, 879, 125 + i * 66, 110, 60);
+  for (let i = 0; i < 12; i++) office(19 + i, 913 - i * 82, 528, 76, 100);
+  for (let i = 0; i < 6; i++) office(31 + i, 11, 455 - i * 66, 110, 60);
+  for (let i = 0; i < 4; i++) desks.push({ id: `V${i + 1}`, label: `V${i + 1}`, type: 'floating', x: 341 + i * 78, y: 300, w: 64, h: 66 });
 
   const s = {
     version: SEED_VERSION,
@@ -34,40 +37,48 @@ function buildSeed() {
   };
   Store.state = s; // les règles lisent l'état courant pendant la génération
 
-  // [id, prénom, nom, rôle, régime, associés, bureau, fonction, semaine type]
-  const U = [
-    ['p1', 'Hélène', 'Marchand', 'associe', '', [], 'B01', 'Associée', []],
-    ['p2', 'Philippe', 'Lambert', 'associe', '', [], 'B02', 'Associé', []],
-    ['p3', 'Sophie', 'Delorme', 'associe', '', [], 'B03', 'Associée', []],
-    ['p4', 'Antoine', 'Rivière', 'associe', '', [], 'B04', 'Associé', []],
-    ['a1', 'Julien', 'Faure', 'avocat', 'bureau', ['p1'], 'B05', 'Avocat senior', [3]],
-    ['a2', 'Camille', 'Roux', 'avocat', 'bureau', ['p1', 'p2'], 'B06', 'Avocate', [1, 5]],
-    ['a3', 'Mathieu', 'Girard', 'avocat', 'bureau', ['p2'], 'B07', 'Avocat', [5]],
-    ['a4', 'Léa', 'Bonnet', 'avocat', 'bureau', ['p2'], 'B08', 'Avocate', [2, 5]],
-    ['a5', 'Thomas', 'Mercier', 'avocat', 'bureau', ['p3'], 'B09', 'Avocat senior', [3]],
-    ['a6', 'Inès', 'Lefort', 'avocat', 'bureau', ['p3', 'p4'], 'B10', 'Avocate', [1]],
-    ['a7', 'Hugo', 'Perrin', 'avocat', 'bureau', ['p4'], 'B11', 'Avocat', [4]],
-    ['a8', 'Chloé', 'Garnier', 'avocat', 'sans_bureau', ['p1'], null, 'Avocate', [1, 3]],
-    ['a9', 'Maxime', 'Fontaine', 'avocat', 'sans_bureau', ['p2', 'p3'], null, 'Avocat', [2, 5]],
-    ['a10', 'Sarah', 'Benali', 'avocat', 'sans_bureau', ['p4'], null, 'Avocate', [4]],
-    ['a11', 'Paul', 'Chevalier', 'avocat', 'non_eligible', ['p3'], 'B12', 'Avocat (élève-avocat)', []],
-    ['s1', 'Nathalie', 'Robin', 'salarie', 'droit_commun', ['p1', 'p2', 'p3', 'p4'], 'B13', 'Office manager', [3]],
-    ['s2', 'Isabelle', 'Morel', 'salarie', 'droit_commun', ['p1'], 'B14', 'Assistante juridique', [5]],
-    ['s3', 'Karim', 'Haddad', 'salarie', 'droit_commun', ['p2'], 'B15', 'Juriste', [1]],
-    ['s4', 'Émilie', 'Dupuis', 'salarie', 'droit_commun', ['p3', 'p4'], 'B16', 'Comptable', [2]],
-    ['s5', 'Lucas', 'Vidal', 'salarie', 'droit_commun', ['p4'], 'B17', 'Assistant juridique', [4]],
-    ['s6', 'Martine', 'Leroy', 'salarie', 'specifique', ['p1'], 'B18', 'Assistante juridique', [2, 4]],
-    ['s7', 'Olivier', 'Blanc', 'salarie', 'specifique', ['p2', 'p3'], 'B19', 'Documentaliste', [1, 3]],
-    ['s8', 'Valérie', 'Caron', 'salarie', 'non_eligible', ['p1', 'p2'], 'B20', "Chargée d'accueil", []],
+  /* Effectif fictif : 7 associés, 23 avocats collaborateurs, 9 salariés */
+  const PARTNERS = [['Hélène', 'Marchand', 'F'], ['Philippe', 'Lambert', 'M'], ['Sophie', 'Delorme', 'F'], ['Antoine', 'Rivière', 'M'],
+    ['Catherine', 'Vasseur', 'F'], ['Laurent', 'Brunet', 'M'], ['Florence', 'Aubert', 'F']];
+  const LAWYERS = [
+    ['Julien', 'Faure', 'M', 'bureau'], ['Camille', 'Roux', 'F', 'bureau'], ['Mathieu', 'Girard', 'M', 'bureau'], ['Léa', 'Bonnet', 'F', 'bureau'],
+    ['Thomas', 'Mercier', 'M', 'bureau'], ['Inès', 'Lefort', 'F', 'bureau'], ['Hugo', 'Perrin', 'M', 'bureau'], ['Manon', 'Lemoine', 'F', 'bureau'],
+    ['Nicolas', 'Gauthier', 'M', 'bureau'], ['Pauline', 'Masson', 'F', 'bureau'], ['Alexandre', 'Renaud', 'M', 'bureau'], ['Charlotte', 'Arnaud', 'F', 'bureau'],
+    ['Romain', 'Picard', 'M', 'bureau'], ['Juliette', 'Collin', 'F', 'bureau'], ['Guillaume', 'Barbier', 'M', 'bureau'], ['Marion', 'Roche', 'F', 'bureau'],
+    ['Quentin', 'Leclerc', 'M', 'bureau'], ['Anaïs', 'Meunier', 'F', 'bureau'], ['Benoît', 'Carpentier', 'M', 'bureau'],
+    ['Chloé', 'Garnier', 'F', 'sans_bureau'], ['Maxime', 'Fontaine', 'M', 'sans_bureau'], ['Sarah', 'Benali', 'F', 'sans_bureau'],
+    ['Paul', 'Chevalier', 'M', 'non_eligible'],
   ];
+  const STAFF = [
+    ['Nathalie', 'Robin', 'droit_commun', 'Office manager', ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7'], [3]],
+    ['Karim', 'Haddad', 'droit_commun', 'Juriste', ['p2', 'p5'], [1]],
+    ['Martine', 'Leroy', 'specifique', 'Assistante juridique', ['p1', 'p3'], [2, 4]],
+    ['Isabelle', 'Morel', 'non_eligible', 'Assistante juridique', ['p1', 'p4'], []],
+    ['Émilie', 'Dupuis', 'non_eligible', 'Comptable', ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7'], []],
+    ['Lucas', 'Vidal', 'non_eligible', 'Assistant juridique', ['p2', 'p6'], []],
+    ['Valérie', 'Caron', 'non_eligible', "Chargée d'accueil", ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7'], []],
+    ['Olivier', 'Blanc', 'non_eligible', 'Documentaliste', ['p3', 'p7'], []],
+    ['Agnès', 'Muller', 'non_eligible', 'Assistante juridique', ['p5', 'p7'], []],
+  ];
+  const WEEKS = [[3], [1, 5], [5], [2, 5], [3], [1], [4], [1, 3], [2, 4], [5], [3, 5], [2], [1, 4]];
+  const U = []; let officeNo = 1;
+  PARTNERS.forEach(([f, l, g], i) => U.push([`p${i + 1}`, f, l, 'associe', '', [], `B${D.pad(officeNo++)}`, g === 'F' ? 'Associée' : 'Associé', []]));
+  LAWYERS.forEach(([f, l, g, regime], i) => {
+    const partners = [`p${(i % 7) + 1}`]; if (i % 4 === 1) partners.push(`p${((i + 3) % 7) + 1}`);
+    const senior = i % 5 === 0 && regime === 'bureau';
+    const title = regime === 'non_eligible' ? (g === 'F' ? 'Élève-avocate' : 'Élève-avocat') : (g === 'F' ? 'Avocate' : 'Avocat') + (senior ? ' senior' : '');
+    U.push([`a${i + 1}`, f, l, 'avocat', regime, partners, regime === 'sans_bureau' ? null : `B${D.pad(officeNo++)}`, title, regime === 'non_eligible' ? [] : WEEKS[i % WEEKS.length]]);
+  });
+  STAFF.forEach(([f, l, regime, title, partners, week], i) => U.push([`s${i + 1}`, f, l, 'salarie', regime, partners, `B${D.pad(officeNo++)}`, title, week]));
+
   s.users = U.map(([id, firstName, lastName, role, regime, partners, desk, title, typicalWeek]) => ({
     id, firstName, lastName, role, regime, partners, desk, title, typicalWeek,
     email: `${firstName}.${lastName}`.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '') + '@cabinet-demo.fr',
-    specificRegimeId: id === 's6' ? 'rs1' : id === 's7' ? 'rs2' : null,
-    creditAdjustment: id === 's3' ? 2 : id === 's5' ? -3 : 0,
-    preferredDesk: { a8: 'V1', a9: 'V3', a10: 'V5' }[id] || null,
+    specificRegimeId: regime === 'specifique' ? 'rs1' : null,
+    creditAdjustment: id === 's2' ? 2 : 0,
+    preferredDesk: { a20: 'V1', a21: 'V3', a22: 'V4' }[id] || null,
   }));
-  ['p1', 'p2', 'p3', 'p4'].forEach((p, i) => { s.partnerPrefs[p] = { emailDigest: i !== 2 }; });
+  s.users.filter(u => u.role === 'associe').forEach((p, i) => { s.partnerPrefs[p.id] = { emailDigest: i % 3 !== 2 }; });
 
   const nonPartners = s.users.filter(u => u.role !== 'associe').map(u => u.id);
 

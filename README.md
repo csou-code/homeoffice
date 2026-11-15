@@ -11,7 +11,17 @@ L'objectif est de valider les parcours et les règles métier avant le développ
 - **GitHub Pages** : *Settings → Pages → Build and deployment → Deploy from a branch*, branche `main`, dossier `/ (root)`. L'application est servie à l'adresse `https://<compte>.github.io/homeoffice/`.
 - **En local** : ouvrir `index.html` dans un navigateur, ou lancer un petit serveur (`python3 -m http.server`) à la racine du dépôt.
 
-La connexion Microsoft est simulée : l'écran d'accueil propose une liste de comptes de démonstration (associés, avocats de chaque régime, salariés de chaque régime).
+La connexion Microsoft est simulée : l'écran d'accueil propose de choisir l'un des comptes de démonstration.
+
+**Effectif fictif** (39 personnes)
+
+- 7 associés ;
+- 23 avocats collaborateurs : 19 éligibles avec bureau attitré, 3 éligibles sans bureau attitré, 1 non éligible ;
+- 9 salariés : 2 en régime de droit commun, 1 en régime spécifique, 6 non éligibles.
+
+Le plan des locaux compte 36 bureaux attitrés et 4 bureaux volants.
+
+**Charte graphique** : elle reprend celle du site lusis-avocats.com (logo, anthracite `#3b424a`, or `#cd9019` / `#ffb81d`, fond crème `#fffcf7`, motifs triangulaires, menus en majuscules). Les polices du site (Pragmatica, Nimbus Sans) sont sous licence Adobe Fonts et ne peuvent pas être chargées depuis GitHub Pages. Elles sont remplacées par des équivalents : Archivo (Google Fonts) pour les titres et la pile Helvetica pour le texte. La version Symfony pourra utiliser le kit Adobe Fonts du cabinet en déclarant son domaine.
 
 ## Ce que couvre la POC
 
@@ -42,6 +52,7 @@ Les jours fériés français, y compris les fêtes mobiles, sont calculés autom
 
 ```
 index.html              Page unique
+img/                    Logo et favicon du cabinet
 css/style.css           Styles
 js/dates.js             Dates, jours ouvrés, jours fériés
 js/store.js             Persistance localStorage (à remplacer par l'API)
