@@ -1,6 +1,6 @@
 /* Espace associés : demandes, utilisateurs, jours bloqués, paramètres, régimes spécifiques, reporting. */
 
-const ADMIN_TABS = [['requests', 'Demandes'], ['users', 'Utilisateurs'], ['blocked', 'Présence requise'], ['settings', 'Paramètres'], ['regimes', 'Régimes spécifiques'], ['reporting', 'Reporting']];
+const ADMIN_TABS = [['requests', 'Demandes'], ['users', 'Utilisateurs'], ['blocked', 'Restrictions'], ['settings', 'Paramètres'], ['regimes', 'Régimes spécifiques'], ['reporting', 'Reporting']];
 
 Views.admin = function () {
   const sub = ADMIN_TABS.some(([k]) => k === App.sub) ? App.sub : 'requests';
@@ -142,25 +142,41 @@ Actions['export-days'] = () => {
 };
 
 /* ---------- Jours de présence requise ---------- */
+/* Formulaire de restriction, partagé par l'administration et le calendrier.
+   opts.dates : jours choisis dans le calendrier ; sinon saisie d'une période. */
+Views.blockedForm = function (opts = {}) {
+  const me = App.me(), t = D.today(), dates = opts.dates || null;
+  const pool = S().users.filter(u => u.role !== 'associe' && Rules.isEligible(u))
+    .sort((a, b) => (inMyTeam(b) - inMyTeam(a)) || a.lastName.localeCompare(b.lastName));
+  const hasTT = u => dates && dates.some(d => Rules.dayRecord(u.id, d));
+  const preselect = u => !!opts.inModal || !!dates || !!opts.period ? (u.partners || []).includes(me.id) : false;
+  return `<form data-submit="blocked" class="form-stack" id="blocked-form">
+    ${dates ? `<input type="hidden" name="dates" value="${dates.join(',')}">
+      <div class="note"><strong>${plural(dates.length, 'jour')}</strong> : ${dates.map(D.fmtMed).join(', ')}</div>`
+      : `<div class="grid-2"><label>Du<input type="date" name="from" required min="${t}" value="${opts.from || ''}"></label><label>Au <em>(facultatif)</em><input type="date" name="to" min="${t}"></label></div>`}
+    <fieldset><legend>Personnes concernées</legend>
+      <div class="quick">Sélection rapide : <button type="button" class="link" data-act="bl-sel" data-k="team">mon équipe</button> · <button type="button" class="link" data-act="bl-sel" data-k="avocat">collaborateurs</button> · <button type="button" class="link" data-act="bl-sel" data-k="salarie">salariés</button> · <button type="button" class="link" data-act="bl-sel" data-k="all">tous</button> · <button type="button" class="link" data-act="bl-sel" data-k="none">aucun</button></div>
+      <div class="check-grid people-pick">${pool.map(u => `<label class="check person"><input type="checkbox" name="users" value="${u.id}" data-role="${u.role}" data-team="${(u.partners || []).includes(me.id) ? 1 : 0}" ${preselect(u) ? 'checked' : ''}>
+        ${avatar(u, 'xs')}<span>${esc(fullName(u))}</span>${hasTT(u) ? '<span class="tag warn" title="Télétravail déjà posé sur au moins un des jours">TT posé</span>' : ''}</label>`).join('')}</div>
+    </fieldset>
+    <label>Motif <em>(facultatif)</em><input type="text" name="reason" maxlength="200" placeholder="Ex. : séminaire, audit, formation collective"></label>
+    <p class="hint">Les personnes sélectionnées sont notifiées. Les télétravails déjà posés restent à traiter (confirmation ou opposition) dans Administration → Demandes.</p>
+    <div class="modal-actions">${Modal.current ? '<button type="button" class="btn ghost" data-act="modal-close">Annuler</button>' : ''}<button class="btn primary">Enregistrer la restriction</button></div>
+  </form>`;
+};
+
 Views.admin_blocked = function () {
-  const me = App.me(), t = D.today();
-  const pool = S().users.filter(u => u.role !== 'associe' && Rules.isEligible(u)).sort((a, b) => a.lastName.localeCompare(b.lastName));
+  const t = D.today();
   const list = S().blocked.slice().sort((a, b) => b.date.localeCompare(a.date));
   return `<div class="cal-layout">
-    <section class="card"><h2>Nouveau jour de présence requise</h2>
-      <form data-submit="blocked" class="form-stack" id="blocked-form">
-        <div class="grid-2"><label>Du<input type="date" name="from" required min="${t}"></label><label>Au <em>(facultatif)</em><input type="date" name="to" min="${t}"></label></div>
-        <fieldset><legend>Personnes concernées</legend>
-          <div class="quick">Sélection rapide : <button type="button" class="link" data-act="bl-sel" data-k="team">mes rattachés</button> · <button type="button" class="link" data-act="bl-sel" data-k="avocat">avocats</button> · <button type="button" class="link" data-act="bl-sel" data-k="salarie">salariés</button> · <button type="button" class="link" data-act="bl-sel" data-k="all">tous</button> · <button type="button" class="link" data-act="bl-sel" data-k="none">aucun</button></div>
-          <div class="check-grid">${pool.map(u => `<label class="check"><input type="checkbox" name="users" value="${u.id}" data-role="${u.role}" data-team="${(u.partners || []).includes(me.id) ? 1 : 0}"> ${esc(fullName(u))}</label>`).join('')}</div>
-        </fieldset>
-        <label>Motif <em>(facultatif)</em><input type="text" name="reason" maxlength="200" placeholder="Ex. : séminaire, audit, formation collective"></label>
-        <div><button class="btn primary">Enregistrer</button></div>
-      </form></section>
-    <section class="card"><h2>Jours enregistrés</h2>${list.length ? `<ul class="list">${list.map(b => `<li class="bl-item ${b.date < t ? 'past' : ''}">
+    <section class="card"><h2>Nouvelle restriction de télétravail</h2>
+      <p class="hint">Vous pouvez aussi restreindre des jours directement depuis votre calendrier.</p>
+      ${Views.blockedForm()}</section>
+    <section class="card"><h2>Restrictions enregistrées</h2>${list.length ? `<ul class="list">${list.map(b => `<li class="bl-item ${b.date < t ? 'past' : ''}">
       <div><strong>${D.fmtMed(b.date)}</strong> – ${plural(b.userIds.length, 'personne')}${b.reason ? ` – ${esc(b.reason)}` : ' <span class="muted">(sans motif)</span>'}
-      <small class="muted" data-tip="${esc(b.userIds.map(id => fullName(userById(id))).join(', '))}">Par ${esc(shortName(userById(b.by)))} · survoler pour voir les personnes</small></div>
-      ${b.date >= t ? `<button class="btn sm danger-ghost" data-act="del-blocked" data-id="${b.id}">Supprimer</button>` : ''}</li>`).join('')}</ul>` : '<p class="muted">Aucun.</p>'}</section>
+      <small class="muted">Par ${esc(shortName(userById(b.by)))}</small>
+      <span class="mini-people">${b.userIds.slice(0, 12).map(id => avatar(userById(id), 'xs')).join('')}${b.userIds.length > 12 ? `<span class="avatar xs more">+${b.userIds.length - 12}</span>` : ''}</span></div>
+      ${b.date >= t ? `<button class="btn sm danger-ghost" data-act="del-blocked" data-id="${b.id}">Supprimer</button>` : ''}</li>`).join('')}</ul>` : '<p class="muted">Aucune.</p>'}</section>
   </div>`;
 };
 Actions['bl-sel'] = el => {
@@ -170,10 +186,15 @@ Actions['bl-sel'] = el => {
   });
 };
 Submits.blocked = (f, fd) => {
-  const from = fd.get('from'), to = fd.get('to') || from, users = fd.getAll('users');
+  const users = fd.getAll('users');
+  let dates;
+  if (fd.get('dates')) dates = fd.get('dates').split(',').filter(D.isBusiness);
+  else {
+    const from = fd.get('from'), to = fd.get('to') || from;
+    if (to < from) { toast('La date de fin précède la date de début.', 'ko'); return; }
+    dates = D.businessDays(from, to);
+  }
   if (!users.length) { toast('Sélectionnez au moins une personne.', 'ko'); return; }
-  if (to < from) { toast('La date de fin précède la date de début.', 'ko'); return; }
-  const dates = D.businessDays(from, to);
   if (!dates.length) { toast('Aucun jour ouvré dans cette période.', 'ko'); return; }
   const reason = (fd.get('reason') || '').trim();
   let conflicts = 0;
@@ -184,10 +205,12 @@ Submits.blocked = (f, fd) => {
       Rules.notify(id, `Présence requise au cabinet le ${D.fmtLong(date)}${reason ? ` : ${reason}` : ''}.`);
     });
   });
+  App.selMode = false; App.selDays = [];
+  if (Modal.current) Modal.close();
   commit();
-  toast(`${plural(dates.length, 'jour')} enregistré${dates.length > 1 ? 's' : ''}.${conflicts ? ` ${conflicts} télétravail(s) déjà posé(s) à traiter dans « Demandes ».` : ''}`, conflicts ? 'warn' : 'ok');
+  toast(`Restriction enregistrée sur ${plural(dates.length, 'jour')}.${conflicts ? ` ${conflicts} télétravail(s) déjà posé(s) à traiter dans « Demandes ».` : ''}`, conflicts ? 'warn' : 'ok');
 };
-Actions['del-blocked'] = el => { S().blocked = S().blocked.filter(b => b.id !== el.dataset.id); commit(); toast('Jour supprimé.'); };
+Actions['del-blocked'] = el => { S().blocked = S().blocked.filter(b => b.id !== el.dataset.id); commit(); toast('Restriction supprimée.'); };
 
 /* ---------- Paramètres ---------- */
 Views.admin_settings = function () {

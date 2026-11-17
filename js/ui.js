@@ -10,7 +10,30 @@ const ICONS = {
   doc: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm7 1.5V9h5.5L13 3.5ZM8 13h8v1.5H8V13Zm0 3.5h8V18H8v-1.5Z"/></svg>',
 };
 
-const avatar = u => `<span class="avatar" aria-hidden="true">${esc(u.firstName[0] + u.lastName[0])}</span>`;
+/* « Mon équipe » : pour un associé, ses collaborateurs et salariés rattachés ;
+   pour les autres, leur(s) associé(s) et les personnes rattachées aux mêmes associés. */
+function inMyTeam(u) {
+  const me = App.me && App.me();
+  if (!me || !u || u.id === me.id) return false;
+  if (me.role === 'associe') return (u.partners || []).includes(me.id);
+  const ps = me.partners || [];
+  return ps.includes(u.id) || (u.partners || []).some(p => ps.includes(p));
+}
+const ROLE_SHORT = { associe: 'Associé', avocat: 'Collaborateur', salarie: 'Salarié' };
+const avatar = (u, size = '') => {
+  const team = inMyTeam(u);
+  return `<span class="avatar r-${u.role}${team ? ' team' : ''}${size ? ` ${size}` : ''}" title="${esc(`${fullName(u)} – ${ROLE_SHORT[u.role]}${team ? ' · mon équipe' : ''}`)}">${esc(u.firstName[0] + u.lastName[0])}</span>`;
+};
+/* Légende des pastilles de personnes */
+const peopleLegend = () => {
+  const me = App.me();
+  return `<div class="people-legend" aria-label="Légende des personnes">
+    <span><span class="avatar xs r-associe">A</span> Associé</span>
+    <span><span class="avatar xs r-avocat">C</span> Collaborateur</span>
+    <span><span class="avatar xs r-salarie">S</span> Salarié</span>
+    <span><span class="avatar xs r-avocat team">É</span> ${me && me.role === 'associe' ? 'Rattaché à mon équipe' : 'Mon équipe (mes associés et leurs équipes)'}</span>
+  </div>`;
+};
 const badge = st => `<span class="badge ${STATUS[st].cls}">${STATUS[st].label}</span>`;
 const plural = (n, w) => `${n} ${n > 1 ? (/(au|eu)$/.test(w) ? w + 'x' : w + 's') : w}`;
 const fmtDateTime = s => new Date(s).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });

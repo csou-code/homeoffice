@@ -2,6 +2,7 @@
 const App = {
   route: 'calendar', sub: null,
   calMonth: null, planDate: null, teamWeek: null, teamFilter: 'all', reqScope: 'team', report: null, planFind: null,
+  calView: 'month', calWeekends: false, calWeek: null, selMode: false, selDays: [],
   dayForm: { special: false, reason: '', detail: '', lateReason: '' },
 
   me() { return S() && S().currentUserId ? userById(S().currentUserId) : null; },
@@ -10,6 +11,8 @@ const App = {
     Store.load();
     const t = D.today();
     this.calMonth = t.slice(0, 7);
+    this.calWeek = D.monday(t);
+    CalPrefs.load();
     this.planDate = D.isBusiness(t) ? t : D.nextBusiness(t);
     this.teamWeek = D.monday(this.planDate);
     window.addEventListener('hashchange', () => this.onHash());
@@ -18,6 +21,7 @@ const App = {
 
   onHash() {
     const [r, sub] = (location.hash.slice(1) || 'calendar').split('/');
+    if (r !== this.route) { this.selMode = false; this.selDays = []; }
     this.route = r; this.sub = sub || null;
     if (Modal.current) Modal.close();
     this.render();

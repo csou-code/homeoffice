@@ -37,6 +37,7 @@ Views.plan = function () {
         <span><i class="sw present"></i> Présent</span><span><i class="sw remote"></i> Télétravail</span><span><i class="sw vacant"></i> Poste inoccupé</span>
         <span><i class="sw free"></i> Poste volant libre</span><span><i class="sw booked"></i> Poste volant réservé</span><span><i class="sw mine"></i> Mon poste</span>
       </div>
+      ${peopleLegend()}
       ${App.planFind ? Views.findResult(App.planFind, d) : ''}
     </section>
     <div class="plan-lists">
@@ -67,20 +68,21 @@ Views.floorPlan = function (d) {
   };
   const shapes = S().desks.map(dk => {
     let st, txt, tip, attrs = '', mine = false, found = false;
+    let person = null;
     if (dk.type !== 'floating') {
       const u = S().users.find(x => x.desk === dk.id);
-      mine = u && u.id === me.id; found = u && u.id === find;
+      person = u; mine = u && u.id === me.id; found = u && u.id === find;
       if (!u) { st = 'vacant'; txt = ''; tip = `${dk.label} – poste inoccupé`; }
       else {
         const r = biz && Rules.dayRecord(u.id, d);
         st = !biz ? 'closed' : r ? 'remote' : 'present';
         txt = u.trigram;
-        tip = `${dk.label} – ${fullName(u)}${biz ? ` : ${r ? 'télétravail' : 'au cabinet'}` : ''}`;
+        tip = `${dk.label} – ${fullName(u)} (${ROLE_SHORT[u.role]}${inMyTeam(u) ? ', mon équipe' : ''})${biz ? ` : ${r ? 'télétravail' : 'au cabinet'}` : ''}`;
       }
     } else {
       const b = biz && Rules.deskBooking(dk.id, d);
       mine = b && b.userId === me.id; found = findBk && findBk.deskId === dk.id;
-      const who = b ? userById(b.userId) : null;
+      const who = b ? userById(b.userId) : null; person = who;
       st = !biz ? 'closed' : b ? 'booked' : 'free';
       txt = who ? who.trigram : biz ? 'Libre' : '';
       tip = `Poste volant ${dk.label} – ${who ? fullName(who) : biz ? 'libre' : 'cabinet fermé'}`;
@@ -89,7 +91,7 @@ Views.floorPlan = function (d) {
       if (clickable) st += ' clickable';
     }
     return `<g class="desk ${dk.type} ${st}${mine ? ' me' : ''}${found ? ' found' : ''}"${attrs} data-tip="${esc(tip)}">
-      <rect x="${dk.x}" y="${dk.y}" width="${dk.w}" height="${dk.h}" rx="3"/>${txt ? label(dk, txt, txt === 'Libre' ? 'tri free-lbl' : 'tri') : ''}</g>`;
+      <rect x="${dk.x}" y="${dk.y}" width="${dk.w}" height="${dk.h}" rx="3"/>${person ? `<circle cx="${dk.x + dk.w - 7}" cy="${dk.y + 7}" r="5" class="rdot r-${person.role}${inMyTeam(person) ? ' team' : ''}"/>` : ''}${txt ? label(dk, txt, txt === 'Libre' ? 'tri free-lbl' : 'tri') : ''}</g>`;
   }).join('');
   return `<div class="plan-wrap"><svg viewBox="0 0 ${FLOOR_PLAN.width} ${FLOOR_PLAN.height}" class="plan" role="img" aria-label="Plan des locaux">
     <image href="${FLOOR_PLAN.image}" x="0" y="0" width="${FLOOR_PLAN.width}" height="${FLOOR_PLAN.height}" class="plan-bg"/>
@@ -147,7 +149,7 @@ Views.team = function () {
       <thead><tr><th>Personne</th>${week.map(d => `<th class="${d === t ? 'today' : ''}"><button class="link" data-act="open-day" data-date="${d}">${D.fmtMed(d)}</button></th>`).join('')}</tr></thead>
       <tbody>${users.map(u => `<tr class="${u.id === me.id ? 'me-row' : ''}"><th>${avatar(u)}<span><strong>${esc(fullName(u))}</strong><small>${esc(Rules.regimeLabel(u))}</small></span></th>${week.map(d => cell(u, d)).join('')}</tr>`).join('')}</tbody>
       <tfoot><tr><th>En télétravail</th>${counts.map(c => `<td><strong>${c}</strong></td>`).join('')}</tr></tfoot>
-    </table></div></section>`;
+    </table></div>${peopleLegend()}</section>`;
 };
 Changes['team-filter'] = el => { App.teamFilter = el.value; App.render(); };
 Actions['team-week'] = el => { App.teamWeek = D.add(App.teamWeek, +el.dataset.n); App.render(); };

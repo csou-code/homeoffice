@@ -1,56 +1,154 @@
 /* Calendrier personnel et fiche d'une journée (pose, retrait, bureau volant, présents). */
 
-Views.calendar = function () {
-  const me = App.me(), t = D.today(), ym = App.calMonth;
-  const first = `${ym}-01`, [y, m] = ym.split('-').map(Number);
-  const last = D.iso(new Date(y, m, 0));
-  const days = D.range(D.monday(first), D.add(D.monday(last), 6));
-  const allowed = Rules.allowedWeekdays(me);
+/* Préférences d'affichage du calendrier (propres à ce navigateur) */
+const CalPrefs = {
+  load() {
+    try { const p = JSON.parse(localStorage.getItem('homeoffice-ui') || '{}'); App.calView = p.view === 'week' ? 'week' : 'month'; App.calWeekends = !!p.weekends; } catch (e) { /* ignoré */ }
+  },
+  save() { try { localStorage.setItem('homeoffice-ui', JSON.stringify({ view: App.calView, weekends: App.calWeekends })); } catch (e) { /* ignoré */ } },
+};
 
-  const cells = days.map(d => {
-    const out = d.slice(0, 7) !== ym, biz = D.isBusiness(d), hol = D.holiday(d);
+/* Pastilles des personnes en télétravail un jour donné (mon équipe d'abord) */
+Views.remotePeople = function (d, excludeId) {
+  return Rules.remoteOn(d).filter(r => r.userId !== excludeId).map(r => ({ r, u: userById(r.userId) }))
+    .sort((a, b) => (inMyTeam(b.u) - inMyTeam(a.u)) || a.u.lastName.localeCompare(b.u.lastName));
+};
+Views.avatarStack = function (list, max = 4) {
+  if (!list.length) return '';
+  const more = list.length - max;
+  return `<span class="stack" title="${esc(`En télétravail : ${list.map(x => fullName(x.u)).join(', ')}`)}">${list.slice(0, max).map(x => avatar(x.u, 'xs')).join('')}${more > 0 ? `<span class="avatar xs more">+${more}</span>` : ''}</span>`;
+};
+
+/* Restrictions visibles dans une case : celles qui me concernent, ou toutes pour un associé */
+Views.cellRestrictions = function (me, d) {
+  if (me.role === 'associe') {
+    const list = S().blocked.filter(b => b.date === d);
+    if (!list.length) return '';
+    const n = new Set(list.flatMap(b => b.userIds)).size;
+    return `<span class="pill blocked" title="${esc(list.map(b => b.reason || 'Sans motif').join(' · '))}">Restriction · ${n} pers.</span>`;
+  }
+  const b = Rules.isBlocked(me.id, d);
+  return b ? `<span class="pill blocked" title="${esc(b.reason || '')}">Présence requise</span>` : '';
+};
+
+Views.calendar = function () {
+  const me = App.me(), t = D.today(), isP = me.role === 'associe';
+  const week = App.calView === 'week', we = App.calWeekends;
+  let days, title;
+  if (week) {
+    days = D.range(App.calWeek, D.add(App.calWeek, 6));
+    title = `Semaine du ${D.fmtShort(days[0]).slice(0, 5)} au ${D.fmtShort(days[6])}`;
+  } else {
+    const ym = App.calMonth, [y, m] = ym.split('-').map(Number);
+    days = D.range(D.monday(`${ym}-01`), D.add(D.monday(D.iso(new Date(y, m, 0))), 6));
+    title = D.monthLabel(ym);
+  }
+  if (!we) days = days.filter(d => !D.isWeekend(d));
+  const allowed = Rules.allowedWeekdays(me);
+  const sel = new Set(App.selDays);
+
+  const cell = d => {
+    const out = !week && d.slice(0, 7) !== App.calMonth, biz = D.isBusiness(d), hol = D.holiday(d);
     const rec = Rules.dayRecord(me.id, d) || Rules.refusedRecord(me.id, d);
-    const blk = biz && Rules.isBlocked(me.id, d);
     const bk = Rules.userBooking(me.id, d);
-    const others = biz ? Rules.remoteOn(d).filter(r => r.userId !== me.id).length : 0;
-    const noTT = biz && Rules.isEligible(me) && me.role !== 'associe' && !allowed.includes(D.dow(d));
-    const cls = ['cal-cell', out && 'out', !biz && 'off', d === t && 'today', d < t && 'past', blk && 'blocked'].filter(Boolean).join(' ');
-    return `<button class="${cls}" data-act="open-day" data-date="${d}" aria-label="${D.fmtLong(d)}">
-      <span class="num">${+d.slice(8)}</span>
-      ${hol ? `<span class="hol">${hol}</span>` : ''}
-      ${rec ? `<span class="pill ${STATUS[rec.status].cls}">${rec.status === 'refused' ? 'TT refusé' : 'Télétravail'}</span>` : ''}
-      ${blk ? '<span class="pill blocked">Présence requise</span>' : ''}
-      ${noTT && !blk ? '<span class="pill muted">Non télétravaillable</span>' : ''}
+    const others = biz ? Views.remotePeople(d, me.id) : [];
+    const restr = biz ? Views.cellRestrictions(me, d) : '';
+    const noTT = biz && Rules.isEligible(me) && !isP && !allowed.includes(D.dow(d));
+    const selectable = App.selMode && biz && d >= t;
+    const cls = ['cal-cell', week && 'wk-cell', out && 'out', !biz && 'off', d === t && 'today', d < t && 'past', sel.has(d) && 'selected', selectable && 'selectable'].filter(Boolean).join(' ');
+    const act = App.selMode ? (selectable ? `data-act="sel-day" data-date="${d}"` : 'disabled') : `data-act="open-day" data-date="${d}"`;
+    const mine = rec ? `<span class="pill ${STATUS[rec.status].cls}">${rec.status === 'refused' ? 'TT refusé' : 'Mon télétravail'}</span>` : '';
+    const head = `<span class="cell-head"><span class="num">${week ? `${D.WD_SHORT[D.dow(d)]} ` : ''}${+d.slice(8)}</span>${sel.has(d) ? '<span class="sel-mark" aria-hidden="true">✓</span>' : ''}</span>`;
+    if (week) {
+      const free = biz ? Rules.floatingDesks().filter(x => !Rules.deskBooking(x.id, d)).length : 0;
+      return `<button class="${cls}" ${act} aria-label="${D.fmtLong(d)}">${head}
+        ${hol ? `<span class="hol">${hol}</span>` : ''}${mine}${restr}
+        ${noTT && !restr ? '<span class="pill muted">Non télétravaillable</span>' : ''}
+        ${bk ? `<span class="pill desk">Poste ${bk.deskId}</span>` : ''}
+        ${biz ? `<span class="wk-sub">En télétravail (${others.length})</span>
+        <span class="wk-people">${others.map(({ r, u }) => `<span class="wk-person ${r.status}">${avatar(u, 'xs')}<span>${esc(shortName(u))}</span></span>`).join('') || '<span class="muted">Personne</span>'}</span>
+        <span class="wk-foot">${free}/${Rules.floatingDesks().length} postes volants libres</span>` : ''}
+      </button>`;
+    }
+    return `<button class="${cls}" ${act} aria-label="${D.fmtLong(d)}">${head}
+      ${hol ? `<span class="hol">${hol}</span>` : ''}${mine}${restr}
+      ${noTT && !restr ? '<span class="pill muted">Non télétravaillable</span>' : ''}
       ${bk ? `<span class="pill desk">Poste ${bk.deskId}</span>` : ''}
-      ${others ? `<span class="others">${others} en TT</span>` : ''}
+      ${others.length ? `<span class="others">${Views.avatarStack(others)}</span>` : ''}
     </button>`;
-  }).join('');
+  };
+  const labels = (we ? [1, 2, 3, 4, 5, 6, 0] : [1, 2, 3, 4, 5]).map(w => D.WD_SHORT[w]);
+  const gridCls = `cal-grid ${we ? 'g7' : 'g5'}${week ? ' week' : ''}`;
 
   return `<div class="page-head">
-      <div><h1>Mon calendrier</h1><p class="muted">Cliquez sur un jour pour déclarer un télétravail, réserver un bureau ou voir qui est présent.</p></div>
-      <div class="month-nav">
-        <button class="icon-btn" data-act="cal-month" data-n="-1" aria-label="Mois précédent">${ICONS.chevL}</button>
-        <strong>${D.monthLabel(ym)}</strong>
-        <button class="icon-btn" data-act="cal-month" data-n="1" aria-label="Mois suivant">${ICONS.chevR}</button>
-        <button class="btn ghost sm" data-act="cal-today">Aujourd'hui</button>
+      <div><h1>Mon calendrier</h1><p class="muted">${App.selMode ? 'Mode sélection : cliquez sur les jours à restreindre.' : 'Cliquez sur un jour pour déclarer un télétravail, réserver un poste ou voir qui est présent.'}</p></div>
+      <div class="cal-toolbar">
+        <div class="seg" role="group" aria-label="Affichage">
+          <button class="${!week ? 'on' : ''}" data-act="cal-view" data-v="month" aria-pressed="${!week}">Mois</button>
+          <button class="${week ? 'on' : ''}" data-act="cal-view" data-v="week" aria-pressed="${week}">Semaine</button>
+        </div>
+        <label class="switch"><input type="checkbox" data-change="cal-weekends" ${we ? 'checked' : ''}><span>Week-ends</span></label>
+        <div class="month-nav">
+          <button class="icon-btn" data-act="cal-nav" data-n="-1" aria-label="${week ? 'Semaine' : 'Mois'} précédent${week ? 'e' : ''}">${ICONS.chevL}</button>
+          <strong class="${week ? '' : 'cap'}">${title}</strong>
+          <button class="icon-btn" data-act="cal-nav" data-n="1" aria-label="${week ? 'Semaine' : 'Mois'} suivant${week ? 'e' : ''}">${ICONS.chevR}</button>
+          <button class="btn ghost sm" data-act="cal-today">Aujourd'hui</button>
+        </div>
       </div>
     </div>
+    ${isP ? `<div class="restrict-bar ${App.selMode ? 'active' : ''}">
+      ${App.selMode
+        ? `<span><strong>${plural(App.selDays.length, 'jour')} sélectionné${App.selDays.length > 1 ? 's' : ''}</strong>${App.selDays.length ? ` : ${App.selDays.slice().sort().map(D.fmtMed).join(', ')}` : ''}</span>
+           <span class="rb-actions"><button class="btn primary sm" data-act="restrict-open" ${App.selDays.length ? '' : 'disabled'}>Restreindre ces jours</button><button class="btn ghost sm" data-act="sel-mode" data-on="0">Annuler</button></span>`
+        : `<span>Restreindre le télétravail de votre équipe ou du cabinet :</span>
+           <span class="rb-actions"><button class="btn ghost sm" data-act="sel-mode" data-on="1">Sélectionner des jours</button><button class="btn ghost sm" data-act="restrict-open" data-period="1">Saisir une période</button></span>`}
+    </div>` : ''}
     <div class="cal-layout">
       <section class="card cal-card">
-        <div class="cal-grid head">${['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(l => `<div>${l}</div>`).join('')}</div>
-        <div class="cal-grid">${cells}</div>
+        <div class="${gridCls} head">${labels.map(l => `<div>${l}</div>`).join('')}</div>
+        <div class="${gridCls}">${days.map(cell).join('')}</div>
         <div class="legend">
-          <span><i class="pill pending">&nbsp;</i> En attente de confirmation</span>
+          <span><i class="pill pending">&nbsp;</i> En attente</span>
           <span><i class="pill ok">&nbsp;</i> Confirmé</span>
           <span><i class="pill ko">&nbsp;</i> Refusé</span>
-          <span><i class="pill blocked">&nbsp;</i> Présence requise</span>
-          <span><i class="pill desk">&nbsp;</i> Bureau volant réservé</span>
+          <span><i class="pill blocked">&nbsp;</i> ${isP ? 'Restriction de télétravail' : 'Présence requise'}</span>
+          <span><i class="pill desk">&nbsp;</i> Poste volant réservé</span>
+          ${week ? '<span><b class="q">?</b> Télétravail en attente de confirmation</span>' : ''}
         </div>
+        ${peopleLegend()}
       </section>
       <aside class="side">${Views.regimeCard(me)}${Views.upcomingCard(me)}</aside>
     </div>`;
 };
 
+Actions['cal-view'] = el => {
+  App.calView = el.dataset.v;
+  if (App.calView === 'week') {
+    const t = D.today();
+    App.calWeek = D.monday(App.calMonth === t.slice(0, 7) ? t : `${App.calMonth}-01`);
+  } else App.calMonth = D.add(App.calWeek, 3).slice(0, 7);
+  CalPrefs.save(); App.render();
+};
+Changes['cal-weekends'] = el => { App.calWeekends = el.checked; CalPrefs.save(); App.render(); };
+Actions['cal-nav'] = el => {
+  const n = +el.dataset.n;
+  if (App.calView === 'week') { App.calWeek = D.add(App.calWeek, 7 * n); App.calMonth = D.add(App.calWeek, 3).slice(0, 7); }
+  else App.calMonth = D.addMonths(App.calMonth, n);
+  App.render();
+};
+Actions['cal-today'] = () => { const t = D.today(); App.calMonth = t.slice(0, 7); App.calWeek = D.monday(t); App.render(); };
+
+/* ---------- Restrictions de télétravail depuis le calendrier (associés) ---------- */
+Actions['sel-mode'] = el => { App.selMode = el.dataset.on === '1'; App.selDays = []; App.render(); };
+Actions['sel-day'] = el => {
+  const d = el.dataset.date, i = App.selDays.indexOf(d);
+  if (i >= 0) App.selDays.splice(i, 1); else App.selDays.push(d);
+  App.render();
+};
+Actions['restrict-open'] = el => {
+  const opts = el.dataset.date ? { dates: [el.dataset.date] } : el.dataset.period ? { period: true } : { dates: App.selDays.slice().sort() };
+  Modal.open('Restreindre le télétravail', () => Views.blockedForm(opts), { wide: true });
+};
 Views.regimeCard = function (u) {
   const partners = Rules.partnersOf(u);
   let body = `<dl class="kv">
@@ -91,8 +189,6 @@ Views.upcomingCard = function (u) {
     <li><button class="row-btn" data-act="open-day" data-date="${d.date}"><span>${D.fmtMed(d.date)}</span>${badge(d.status)}</button></li>`).join('')}</ul>` : '<p class="muted">Aucun jour de télétravail à venir.</p>'}</section>`;
 };
 
-Actions['cal-month'] = el => { App.calMonth = D.addMonths(App.calMonth, +el.dataset.n); App.render(); };
-Actions['cal-today'] = () => { App.calMonth = D.today().slice(0, 7); App.render(); };
 
 /* ---------- Fiche d'une journée ---------- */
 Actions['open-day'] = el => {
@@ -170,8 +266,22 @@ Views.dayPanel = function (date) {
     </div>`;
   }
 
+  /* Restrictions du jour (associés) */
+  let restr = '';
+  if (me.role === 'associe' && biz) {
+    const list = S().blocked.filter(b => b.date === date);
+    restr = `<section class="panel-sec"><h3>Restrictions de télétravail</h3>
+      ${list.length ? `<ul class="list">${list.map(b => `<li class="bl-item"><div><strong>${b.reason ? esc(b.reason) : '<span class="muted">Sans motif</span>'}</strong>
+        <small class="muted">${plural(b.userIds.length, 'personne')} · par ${esc(shortName(userById(b.by)))}</small>
+        <span class="mini-people">${b.userIds.map(id => avatar(userById(id), 'xs')).join('')}</span></div>
+        ${b.date >= t ? `<button class="btn sm danger-ghost" data-act="del-blocked" data-id="${b.id}">Supprimer</button>` : ''}</li>`).join('')}</ul>` : '<p class="muted">Aucune restriction ce jour.</p>'}
+      ${date >= t ? `<button class="btn ghost sm" data-act="restrict-open" data-date="${date}">+ Restreindre le télétravail ce jour</button>` : ''}
+    </section>`;
+  }
+
   return `<section class="panel-sec"><h3>Ma journée</h3>${mine}</section>
     ${desk ? `<section class="panel-sec"><h3>Mon poste volant</h3>${desk}</section>` : ''}
+    ${restr}
     ${overview ? `<section class="panel-sec">${overview}</section>` : ''}`;
 };
 

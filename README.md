@@ -34,7 +34,9 @@ Chaque poste affiche le trigramme de son occupant fictif et son état du jour (p
 | Besoin du cahier des charges | Où le voir |
 |---|---|
 | Catégories et régimes (associés ; avocats avec/sans bureau/non éligibles ; salariés droit commun/spécifique/non éligibles) | Écran de connexion, *Administration → Utilisateurs* |
-| Calendrier personnel : jours posés, statut, jours non télétravaillables, présence requise | *Mon calendrier* |
+| Calendrier personnel : jours posés, statut, jours non télétravaillables, présence requise. Vue mois (jours ouvrés par défaut) ou semaine, week-ends affichables | *Mon calendrier* |
+| Repérage des personnes : couleur par catégorie (associé anthracite, collaborateur or, salarié gris) et anneau vert pour « mon équipe » | Partout (calendrier, équipe, plan, demandes) |
+| Restrictions de télétravail posées par un associé depuis le calendrier (sélection de jours, période, ou depuis la fiche d'un jour) | *Mon calendrier* (compte associé) |
 | Voir les jours de télétravail des autres, et pour chaque jour les personnes en télétravail et l'occupation des bureaux volants | Clic sur un jour, *Équipe*, *Plan & bureaux* |
 | Plan interactif et réservation des bureaux volants (avocats sans bureau attitré) | *Plan & bureaux*, fiche d'une journée |
 | Semaine type (avocats éligibles, salariés en régime spécifique), modifiable au cas par cas | *Mon compte* |
@@ -46,7 +48,7 @@ Chaque poste affiche le trigramme de son occupant fictif et son état du jour (p
 | Associés : confirmer (en informant ou non le collaborateur) ou s'opposer avec un motif obligatoire, jusqu'à la veille | *Administration → Demandes* |
 | E-mail du soir (poses non confirmées prévues dans deux jours ouvrés), activable par associé | *Administration → Demandes* (aperçu) |
 | Modifier la catégorie et le régime, les rattachements à un ou plusieurs associés, l'ajustement du crédit, le bureau | *Administration → Utilisateurs* |
-| Jours de présence requise pour une ou plusieurs personnes, motif facultatif | *Administration → Présence requise* |
+| Restrictions de télétravail (jours de présence requise) pour une ou plusieurs personnes, motif facultatif | *Mon calendrier* ou *Administration → Restrictions* |
 | Paramètres : délais, crédit de base (20), crédit additionnel (10), maximum par semaine (5), jours télétravaillables | *Administration → Paramètres* |
 | Régimes spécifiques (nombre de jours par semaine ou par mois, jours possibles, délai) | *Administration → Régimes spécifiques* |
 | Reporting par période et par population | *Administration → Reporting* |
