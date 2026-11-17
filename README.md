@@ -19,7 +19,13 @@ La connexion Microsoft est simulée : l'écran d'accueil propose de choisir l'un
 - 23 avocats collaborateurs : 19 éligibles avec bureau attitré, 3 éligibles sans bureau attitré, 1 non éligible ;
 - 9 salariés : 2 en régime de droit commun, 1 en régime spécifique, 6 non éligibles.
 
-Le plan des locaux compte 36 bureaux attitrés et 4 bureaux volants.
+**Plan des locaux** : la vue « Plan & bureaux » reprend le plan réel du cabinet (état de novembre 2026), avec ses 43 postes positionnés à leur emplacement :
+
+- 7 bureaux individuels, attribués aux associés (B01, B09, B10, B11, B12, B13, A11) ;
+- 31 postes en bureaux partagés, attribués aux collaborateurs et aux salariés (2 postes restent libres en B05) ;
+- 5 postes volants, réservables par les avocats sans bureau attitré : V1 (poste partagé de B02) et V2 à V5 (salle A07).
+
+Chaque poste affiche le trigramme de son occupant fictif et son état du jour (présent, télétravail, poste volant libre ou réservé). Les mentions nominatives imprimées sur l'image du plan d'origine ont été masquées. Les coordonnées des postes sont dans `js/floorplan.js`.
 
 **Charte graphique** : elle reprend celle du site lusis-avocats.com (logo, anthracite `#3b424a`, or `#cd9019` / `#ffb81d`, fond crème `#fffcf7`, motifs triangulaires, menus en majuscules). Les polices du site (Pragmatica, Nimbus Sans) sont sous licence Adobe Fonts et ne peuvent pas être chargées depuis GitHub Pages. Elles sont remplacées par des équivalents : Archivo (Google Fonts) pour les titres et la pile Helvetica pour le texte. La version Symfony pourra utiliser le kit Adobe Fonts du cabinet en déclarant son domaine.
 
@@ -52,7 +58,8 @@ Les jours fériés français, y compris les fêtes mobiles, sont calculés autom
 
 ```
 index.html              Page unique
-img/                    Logo et favicon du cabinet
+img/                    Logo, favicon et plan des locaux (anonymisé)
+js/floorplan.js         Position des postes sur le plan
 css/style.css           Styles
 js/dates.js             Dates, jours ouvrés, jours fériés
 js/store.js             Persistance localStorage (à remplacer par l'API)

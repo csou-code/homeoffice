@@ -47,7 +47,7 @@ const Rules = {
 
   specRegime: u => S().specificRegimes.find(r => r.id === u.specificRegimeId) || null,
   regimeLabel(u) {
-    if (u.role === 'associe') return 'Associé';
+    if (u.role === 'associe') return u.title || 'Associé';
     let l = CATEGORIES[u.role].regimes[u.regime] || '—';
     if (Rules.isSpecific(u)) { const r = Rules.specRegime(u); if (r) l += ` – ${r.name}`; }
     return l;
@@ -193,7 +193,8 @@ const Rules = {
   /* Bureaux volants */
   deskBooking: (deskId, date) => S().bookings.find(b => b.deskId === deskId && b.date === date),
   userBooking: (userId, date) => S().bookings.find(b => b.userId === userId && b.date === date),
-  floatingDesks: () => S().desks.filter(d => d.type === 'floating'),
+  floatingDesks: () => S().desks.filter(d => d.type === 'floating').sort((a, b) => a.id.localeCompare(b.id)),
+  deskLabel: id => { const d = id && S().desks.find(x => x.id === id); return d ? d.label : (id || '—'); },
   book(u, date, deskId) {
     if (!Rules.isFloating(u)) return { ok: false, errors: ['Seuls les collaborateurs sans bureau attitré réservent un bureau volant.'] };
     if (!D.isBusiness(date)) return { ok: false, errors: ['Jour non ouvré.'] };

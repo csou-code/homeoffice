@@ -219,37 +219,43 @@ ul.alert { padding-left: 28px; }
 .who small { color: var(--muted); }
 
 /* ---------- Plan ---------- */
-.plan-card { padding: 12px; }
-.plan-wrap { width: 100%; overflow: hidden; }
-.plan { width: 100%; height: auto; display: block; }
-.plan .floor { fill: var(--surface-2); stroke: var(--line-2); stroke-width: 2; }
-.plan .room { fill: #fff; stroke: var(--line-2); stroke-dasharray: 4 4; }
-.plan .room.open { fill: #fbfcfe; }
-.plan .room-lbl { fill: var(--ink-2); font-size: 14px; text-transform: uppercase; letter-spacing: .08em; }
-.plan .room-sub { fill: var(--muted); font-size: 12px; }
-.plan .corner { fill: var(--accent-2); }
-.plan text { font-family: var(--font); pointer-events: none; }
-.plan .lbl { font-size: 11px; font-weight: 700; fill: var(--ink-2); }
-.plan .nm { font-size: 11.5px; font-weight: 600; fill: var(--ink); }
-.plan .st { font-size: 10px; fill: var(--muted); }
-.plan .office rect { stroke-width: 1.5; }
-.plan .office.present rect { fill: var(--ok-bg); stroke: var(--ok-line); }
-.plan .office.remote rect { fill: var(--pending-bg); stroke: var(--pending-line); }
-.plan .office.vacant rect, .plan .office.closed rect { fill: #fff; stroke: var(--line-2); }
-.plan .floating rect { stroke-width: 2; }
-.plan .floating.free rect { fill: #fff; stroke: var(--ok); stroke-dasharray: 5 3; }
-.plan .floating.free .nm { fill: var(--ok); }
-.plan .floating.booked rect { fill: var(--desk-bg); stroke: #9db8dd; }
-.plan .floating.mine rect { fill: var(--primary); stroke: var(--primary); }
-.plan .floating.mine text { fill: #fff; }
-.plan .floating.clickable { cursor: pointer; }
-.plan .floating.clickable:hover rect, .plan .floating.clickable:focus rect { stroke: var(--primary-2); stroke-width: 3; }
-.sw { display: inline-block; width: 14px; height: 12px; border-radius: 3px; border: 1.5px solid; }
-.sw.present { background: var(--ok-bg); border-color: var(--ok-line); }
-.sw.remote { background: var(--pending-bg); border-color: var(--pending-line); }
+.plan-card { padding: 14px; }
+.plan-tools { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.plan-hint { margin: 0; font-size: 13.5px; }
+.plan-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--line); background: #fff; }
+.plan { width: 100%; min-width: 880px; height: auto; display: block; }
+.plan-bg { opacity: .78; }
+.plan .desk rect { stroke-width: 1.6; }
+.plan .desk .tri { font-family: var(--font); font-size: 13px; font-weight: 700; fill: var(--ink); pointer-events: none; letter-spacing: .02em; }
+.plan .desk.present rect { fill: #d9efe1; stroke: #2e7d50; }
+.plan .desk.remote rect { fill: #ffe7a8; stroke: var(--accent); }
+.plan .desk.remote .tri { fill: #6b4600; }
+.plan .desk.vacant rect { fill: rgba(255, 255, 255, .85); stroke: #9aa0a6; stroke-dasharray: 4 3; }
+.plan .desk.closed rect { fill: #eef0f2; stroke: #b5bbc2; }
+.plan .desk.free rect { fill: #fff; stroke: var(--ok); stroke-width: 2.2; stroke-dasharray: 5 3; }
+.plan .desk .free-lbl { fill: var(--ok); font-size: 11.5px; }
+.plan .desk.booked rect { fill: #c9d0d8; stroke: var(--primary); }
+.plan .desk.me rect { stroke: var(--accent-2); stroke-width: 4; }
+.plan .desk.floating.me rect { fill: var(--primary); }
+.plan .desk.floating.me .tri { fill: #fff; }
+.plan .desk.found rect { stroke: #d1342a; stroke-width: 4; animation: pulse 1.2s ease-in-out infinite; }
+.plan .desk.clickable { cursor: pointer; }
+.plan .desk.clickable:hover rect, .plan .desk.clickable:focus rect { stroke: var(--primary-2); stroke-width: 3.5; stroke-dasharray: none; fill: #e5f3ea; }
+.plan .desk.clickable:focus { outline: none; }
+@keyframes pulse { 50% { stroke-opacity: .25; } }
+.find-result { margin: 10px 0 0; padding: 8px 12px; background: var(--surface-2); border: 1px solid var(--line); font-size: 13.5px; }
+.plan-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.plan-lists { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 16px; margin-top: 16px; align-items: start; }
+.plan-lists .card { margin: 0; }
+.people.cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px 12px; }
+.people li small { margin-left: auto; }
+.sw { display: inline-block; width: 14px; height: 12px; border-radius: 2px; border: 1.5px solid; }
+.sw.present { background: #d9efe1; border-color: #2e7d50; }
+.sw.remote { background: #ffe7a8; border-color: var(--accent); }
+.sw.vacant { background: #fff; border-color: #9aa0a6; border-style: dashed; }
 .sw.free { background: #fff; border-color: var(--ok); border-style: dashed; }
-.sw.booked { background: var(--desk-bg); border-color: #9db8dd; }
-.sw.mine { background: var(--primary); border-color: var(--primary); }
+.sw.booked { background: #c9d0d8; border-color: var(--primary); }
+.sw.mine { background: #fff; border-color: var(--accent-2); border-width: 3px; }
 
 /* ---------- Tableaux ---------- */
 .table-card { padding: 0; overflow: hidden; }
@@ -373,6 +379,7 @@ ul.plain { margin: 0; padding-left: 18px; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1000px) {
+  .plan-lists { grid-template-columns: minmax(0, 1fr); }
   .cal-layout { grid-template-columns: minmax(0, 1fr); }
   .settings-grid { grid-template-columns: 1fr; }
   .charts { grid-template-columns: minmax(0, 1fr); }
@@ -392,4 +399,6 @@ ul.plain { margin: 0; padding-left: 18px; }
   .card:not(.table-card) .table-scroll { margin: 0 -14px; }
   .login-card { padding: 20px; }
   .hrow { grid-template-columns: minmax(0, 1fr) 70px 30px; }
+  .plan-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .plan-tiles .tile-value { font-size: 22px; }
 }

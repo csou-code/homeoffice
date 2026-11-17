@@ -86,20 +86,20 @@ Views.admin_users = function () {
         return `<tr><td><span class="who">${avatar(u)}<span><strong>${esc(fullName(u))}</strong><small>${esc(u.title)}</small></span></span></td>
           <td>${CATEGORIES[u.role].label}<br><small class="muted">${esc(Rules.regimeLabel(u))}</small></td>
           <td>${Rules.partnersOf(u).map(p => esc(shortName(p))).join(', ') || '—'}</td>
-          <td>${u.desk || (Rules.isFloating(u) ? 'Volant' : '—')}</td><td>${credit}</td>
+          <td>${u.desk ? esc(Rules.deskLabel(u.desk)) : (Rules.isFloating(u) ? 'Poste volant' : '—')}</td><td>${credit}</td>
           <td><button class="btn sm ghost" data-act="edit-user" data-id="${u.id}">Modifier</button></td></tr>`;
       }).join('')}</tbody></table></div></section>`;
 };
 Actions['edit-user'] = el => {
   const u = userById(el.dataset.id);
-  const offices = S().desks.filter(d => d.type === 'office');
+  const offices = S().desks.filter(d => d.type !== 'floating');
   Modal.open(`Modifier – ${esc(fullName(u))}`, () => `<form data-submit="user" data-id="${u.id}" class="form-stack">
     <label>Catégorie et régime<select name="profile">${PROFILE_OPTIONS.map(([v, l]) => `<option value="${v}" ${v === `${u.role}:${u.role === 'associe' ? '' : u.regime}` ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <label>Régime spécifique <em>(salariés en régime spécifique)</em><select name="spec"><option value="">—</option>${S().specificRegimes.map(r => `<option value="${r.id}" ${u.specificRegimeId === r.id ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select></label>
     <fieldset><legend>Associé(s) de rattachement</legend><div class="check-grid">${S().users.filter(p => p.role === 'associe' && p.id !== u.id).map(p => `<label class="check"><input type="checkbox" name="partners" value="${p.id}" ${(u.partners || []).includes(p.id) ? 'checked' : ''}> ${esc(fullName(p))}</label>`).join('')}</div></fieldset>
     <div class="grid-2">
       <label>Ajustement du crédit annuel <em>(salariés de droit commun)</em><input type="number" name="adj" value="${u.creditAdjustment || 0}" min="-50" max="50" step="1"></label>
-      <label>Bureau attitré<select name="desk"><option value="">Aucun</option>${offices.map(d => { const occ = S().users.find(x => x.desk === d.id && x.id !== u.id); return `<option value="${d.id}" ${u.desk === d.id ? 'selected' : ''} ${occ ? 'disabled' : ''}>${d.id}${occ ? ` – ${esc(shortName(occ))}` : ''}</option>`; }).join('')}</select></label>
+      <label>Poste attitré<select name="desk"><option value="">Aucun</option>${offices.map(d => { const occ = S().users.find(x => x.desk === d.id && x.id !== u.id); return `<option value="${d.id}" ${u.desk === d.id ? 'selected' : ''} ${occ ? 'disabled' : ''}>${esc(d.label)}${d.type === 'individual' ? ' (individuel)' : ''}${occ ? ` – ${esc(shortName(occ))}` : ''}</option>`; }).join('')}</select></label>
     </div>
     <div class="modal-actions"><button type="button" class="btn ghost" data-act="modal-close">Annuler</button><button class="btn primary">Enregistrer</button></div></form>`);
 };
@@ -124,10 +124,10 @@ function downloadCSV(name, rows) {
 }
 Actions['export-users'] = () => {
   const year = D.today().slice(0, 4);
-  const rows = [['Nom', 'Prénom', 'E-mail', 'Fonction', 'Catégorie', 'Régime', 'Associés de rattachement', 'Bureau', `Crédit annuel ${year}`, 'Ajustement', 'Posés (passés)', 'Posés (à venir)', 'Solde', 'Crédit additionnel restant']];
+  const rows = [['Nom', 'Prénom', 'E-mail', 'Fonction', 'Catégorie', 'Régime', 'Associés de rattachement', 'Poste', `Crédit annuel ${year}`, 'Ajustement', 'Posés (passés)', 'Posés (à venir)', 'Solde', 'Crédit additionnel restant']];
   S().users.forEach(u => {
     const c = Rules.isDC(u) ? Rules.credit(u, year) : null;
-    rows.push([u.lastName, u.firstName, u.email, u.title, CATEGORIES[u.role].label, Rules.regimeLabel(u), Rules.partnersOf(u).map(fullName).join(', '), u.desk || (Rules.isFloating(u) ? 'Volant' : ''),
+    rows.push([u.lastName, u.firstName, u.email, u.title, CATEGORIES[u.role].label, Rules.regimeLabel(u), Rules.partnersOf(u).map(fullName).join(', '), u.desk ? Rules.deskLabel(u.desk) : (Rules.isFloating(u) ? 'Poste volant' : ''),
       c ? c.base.total : '', c ? u.creditAdjustment : '', c ? c.base.past : '', c ? c.base.future : '', c ? c.base.left : '', c ? c.extra.left : '']);
   });
   downloadCSV(`recapitulatif-teletravail-${D.today()}.csv`, rows);

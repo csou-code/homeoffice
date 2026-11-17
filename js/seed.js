@@ -1,5 +1,5 @@
 /* Données fictives de démonstration (générées de façon déterministe par rapport à la date du jour). */
-const SEED_VERSION = 5;
+const SEED_VERSION = 6;
 
 function mulberry32(a) {
   return function () {
@@ -15,14 +15,13 @@ function buildSeed() {
   const pick = a => a[Math.floor(rnd() * a.length)];
   const t = D.today();
 
-  /* Plan des locaux : 36 bureaux attitrés (12 en haut, 12 en bas, 6 de chaque côté) + 4 bureaux volants */
-  const desks = [];
-  const office = (n, x, y, w, h) => desks.push({ id: `B${D.pad(n)}`, label: `B${D.pad(n)}`, type: 'office', x, y, w, h });
-  for (let i = 0; i < 12; i++) office(i + 1, 11 + i * 82, 12, 76, 100);
-  for (let i = 0; i < 6; i++) office(13 + i, 879, 125 + i * 66, 110, 60);
-  for (let i = 0; i < 12; i++) office(19 + i, 913 - i * 82, 528, 76, 100);
-  for (let i = 0; i < 6; i++) office(31 + i, 11, 455 - i * 66, 110, 60);
-  for (let i = 0; i < 4; i++) desks.push({ id: `V${i + 1}`, label: `V${i + 1}`, type: 'floating', x: 341 + i * 78, y: 300, w: 64, h: 66 });
+  /* Plan des locaux réel (js/floorplan.js) : 7 bureaux individuels, 31 postes en bureaux partagés, 5 postes volants */
+  const desks = FLOOR_DESKS.map(d => ({ ...d, label: d.type === 'floating' ? `${d.id} · ${d.room}` : d.type === 'individual' ? d.room : `${d.room} – poste ${d.id.split('-')[1]}` }));
+  const byRoom = r => desks.filter(d => d.type === 'office' && d.room === r).map(d => d.id);
+  const partnerDesks = ['B01', 'B09', 'B10', 'B11', 'B12', 'B13', 'A11'].map(r => `${r}-1`);
+  const a08 = byRoom('A08');
+  const staffDesks = [...byRoom('A03'), ...byRoom('A05'), ...byRoom('A09'), a08[4]];
+  const lawyerDesks = [...byRoom('A01'), ...byRoom('A02'), ...byRoom('A12'), ...a08.slice(0, 4), ...byRoom('B02'), ...byRoom('B03'), ...byRoom('B04')];
 
   const s = {
     version: SEED_VERSION,
@@ -38,7 +37,7 @@ function buildSeed() {
   Store.state = s; // les règles lisent l'état courant pendant la génération
 
   /* Effectif fictif : 7 associés, 23 avocats collaborateurs, 9 salariés */
-  const PARTNERS = [['Hélène', 'Marchand', 'F'], ['Philippe', 'Lambert', 'M'], ['Sophie', 'Delorme', 'F'], ['Antoine', 'Rivière', 'M'],
+  const PARTNERS = [['Hélène', 'Marchand', 'F'], ['Pierre', 'Lambert', 'M'], ['Sophie', 'Delorme', 'F'], ['Antoine', 'Rivière', 'M'],
     ['Catherine', 'Vasseur', 'F'], ['Laurent', 'Brunet', 'M'], ['Florence', 'Aubert', 'F']];
   const LAWYERS = [
     ['Julien', 'Faure', 'M', 'bureau'], ['Camille', 'Roux', 'F', 'bureau'], ['Mathieu', 'Girard', 'M', 'bureau'], ['Léa', 'Bonnet', 'F', 'bureau'],
@@ -61,23 +60,32 @@ function buildSeed() {
     ['Agnès', 'Muller', 'non_eligible', 'Assistante juridique', ['p5', 'p7'], []],
   ];
   const WEEKS = [[3], [1, 5], [5], [2, 5], [3], [1], [4], [1, 3], [2, 4], [5], [3, 5], [2], [1, 4]];
-  const U = []; let officeNo = 1;
-  PARTNERS.forEach(([f, l, g], i) => U.push([`p${i + 1}`, f, l, 'associe', '', [], `B${D.pad(officeNo++)}`, g === 'F' ? 'Associée' : 'Associé', []]));
+  const U = [];
+  PARTNERS.forEach(([f, l, g], i) => U.push([`p${i + 1}`, f, l, 'associe', '', [], partnerDesks[i], g === 'F' ? 'Associée' : 'Associé', []]));
   LAWYERS.forEach(([f, l, g, regime], i) => {
     const partners = [`p${(i % 7) + 1}`]; if (i % 4 === 1) partners.push(`p${((i + 3) % 7) + 1}`);
     const senior = i % 5 === 0 && regime === 'bureau';
     const title = regime === 'non_eligible' ? (g === 'F' ? 'Élève-avocate' : 'Élève-avocat') : (g === 'F' ? 'Avocate' : 'Avocat') + (senior ? ' senior' : '');
-    U.push([`a${i + 1}`, f, l, 'avocat', regime, partners, regime === 'sans_bureau' ? null : `B${D.pad(officeNo++)}`, title, regime === 'non_eligible' ? [] : WEEKS[i % WEEKS.length]]);
+    U.push([`a${i + 1}`, f, l, 'avocat', regime, partners, regime === 'sans_bureau' ? null : lawyerDesks.shift(), title, regime === 'non_eligible' ? [] : WEEKS[i % WEEKS.length]]);
   });
-  STAFF.forEach(([f, l, regime, title, partners, week], i) => U.push([`s${i + 1}`, f, l, 'salarie', regime, partners, `B${D.pad(officeNo++)}`, title, week]));
+  STAFF.forEach(([f, l, regime, title, partners, week], i) => U.push([`s${i + 1}`, f, l, 'salarie', regime, partners, staffDesks[i], title, week]));
 
   s.users = U.map(([id, firstName, lastName, role, regime, partners, desk, title, typicalWeek]) => ({
     id, firstName, lastName, role, regime, partners, desk, title, typicalWeek,
     email: `${firstName}.${lastName}`.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '') + '@cabinet-demo.fr',
     specificRegimeId: regime === 'specifique' ? 'rs1' : null,
     creditAdjustment: id === 's2' ? 2 : 0,
-    preferredDesk: { a20: 'V1', a21: 'V3', a22: 'V4' }[id] || null,
+    preferredDesk: { a20: 'V1', a21: 'V2', a22: 'V4' }[id] || null,
   }));
+  /* Trigrammes (initiale du prénom + deux premières lettres du nom), dédoublonnés */
+  const used = new Set();
+  const plain = x => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z]/g, '');
+  s.users.forEach(u => {
+    const f = plain(u.firstName), l = plain(u.lastName);
+    const cands = [f[0] + l.slice(0, 2), f[0] + l[0] + l[2], f[0] + l[0] + l[l.length - 1], f.slice(0, 2) + l[0]];
+    u.trigram = cands.find(c => !used.has(c)) || `${f[0]}${l[0]}${used.size}`;
+    used.add(u.trigram);
+  });
   s.users.filter(u => u.role === 'associe').forEach((p, i) => { s.partnerPrefs[p.id] = { emailDigest: i % 3 !== 2 }; });
 
   const nonPartners = s.users.filter(u => u.role !== 'associe').map(u => u.id);

@@ -21,7 +21,7 @@ Views.calendar = function () {
       ${rec ? `<span class="pill ${STATUS[rec.status].cls}">${rec.status === 'refused' ? 'TT refusé' : 'Télétravail'}</span>` : ''}
       ${blk ? '<span class="pill blocked">Présence requise</span>' : ''}
       ${noTT && !blk ? '<span class="pill muted">Non télétravaillable</span>' : ''}
-      ${bk ? `<span class="pill desk">Bureau ${bk.deskId}</span>` : ''}
+      ${bk ? `<span class="pill desk">Poste ${bk.deskId}</span>` : ''}
       ${others ? `<span class="others">${others} en TT</span>` : ''}
     </button>`;
   }).join('');
@@ -57,7 +57,7 @@ Views.regimeCard = function (u) {
     <dt>Catégorie</dt><dd>${CATEGORIES[u.role].label}</dd>
     <dt>Régime</dt><dd>${esc(Rules.regimeLabel(u))}</dd>
     ${u.role !== 'associe' ? `<dt>Associé(s)</dt><dd>${partners.map(p => esc(fullName(p))).join(', ') || '—'}</dd>` : ''}
-    <dt>Bureau</dt><dd>${u.desk ? `Bureau attitré ${u.desk}` : Rules.isFloating(u) ? 'Bureaux volants (réservation)' : '—'}</dd>
+    <dt>Poste</dt><dd>${u.desk ? esc(Rules.deskLabel(u.desk)) : Rules.isFloating(u) ? 'Postes volants (réservation)' : '—'}</dd>
     ${Rules.isEligible(u) && u.role !== 'associe' ? `<dt>Délai de prévenance</dt><dd>${Rules.noticeLabel(u)}</dd>` : ''}
   </dl>`;
   if (Rules.isDC(u)) body += Views.balances(u, D.today().slice(0, 4));
@@ -150,14 +150,14 @@ Views.dayPanel = function (date) {
   if (Rules.isFloating(me) && biz) {
     const myBk = Rules.userBooking(me.id, date);
     if (rec) desk = '<p class="muted">Vous télétravaillez ce jour : aucune réservation nécessaire.</p>';
-    else desk = `<p class="hint">${myBk ? `Vous occupez le bureau <strong>${myBk.deskId}</strong>.` : 'Choisissez un bureau volant, ici ou sur le plan interactif.'}</p>
+    else desk = `<p class="hint">${myBk ? `Vous occupez le poste volant <strong>${esc(Rules.deskLabel(myBk.deskId))}</strong>.` : 'Choisissez un poste volant, ici ou sur le plan des locaux.'}</p>
       <div class="desk-list">${Rules.floatingDesks().map(dk => {
         const b = Rules.deskBooking(dk.id, date), mineBk = b && b.userId === me.id;
         const canAct = date >= t && (!b || mineBk);
         return `<button class="desk-chip ${b ? (mineBk ? 'mine' : 'taken') : 'free'}" ${canAct ? `data-act="desk" data-desk="${dk.id}" data-date="${date}"` : 'disabled'}>
-          <strong>${dk.label}</strong><small>${mineBk ? 'Mon bureau – annuler' : b ? esc(shortName(userById(b.userId))) : 'Libre'}</small></button>`;
+          <strong>${dk.label}</strong><small>${mineBk ? 'Mon poste – annuler' : b ? esc(shortName(userById(b.userId))) : 'Libre'}</small></button>`;
       }).join('')}</div>
-      <p><a class="link" href="#plan" data-act="goto-plan" data-date="${date}">Ouvrir le plan des locaux →</a></p>`;
+      <p><a class="link" href="#plan" data-act="goto-plan" data-date="${date}">Réserver sur le plan des locaux →</a></p>`;
   }
 
   /* Vue d'ensemble de la journée */
@@ -166,12 +166,12 @@ Views.dayPanel = function (date) {
     const remote = Rules.remoteOn(date).map(r => ({ r, u: userById(r.userId) })).sort((a, b) => a.u.lastName.localeCompare(b.u.lastName));
     overview = `<div class="grid-2 top">
       <div><h3>En télétravail (${remote.length})</h3>${remote.length ? `<ul class="people">${remote.map(({ r, u }) => `<li>${avatar(u)}<span>${esc(fullName(u))}</span>${badge(r.status)}</li>`).join('')}</ul>` : '<p class="muted">Personne.</p>'}</div>
-      <div><h3>Bureaux volants</h3><ul class="people">${Rules.floatingDesks().map(dk => { const b = Rules.deskBooking(dk.id, date); return `<li><span class="desk-code">${dk.label}</span><span>${b ? esc(fullName(userById(b.userId))) : '<span class="free-txt">Libre</span>'}</span></li>`; }).join('')}</ul></div>
+      <div><h3>Postes volants</h3><ul class="people">${Rules.floatingDesks().map(dk => { const b = Rules.deskBooking(dk.id, date); return `<li><span class="desk-code">${dk.label}</span><span>${b ? esc(fullName(userById(b.userId))) : '<span class="free-txt">Libre</span>'}</span></li>`; }).join('')}</ul></div>
     </div>`;
   }
 
   return `<section class="panel-sec"><h3>Ma journée</h3>${mine}</section>
-    ${desk ? `<section class="panel-sec"><h3>Mon bureau volant</h3>${desk}</section>` : ''}
+    ${desk ? `<section class="panel-sec"><h3>Mon poste volant</h3>${desk}</section>` : ''}
     ${overview ? `<section class="panel-sec">${overview}</section>` : ''}`;
 };
 
@@ -204,9 +204,9 @@ Actions.desk = el => {
   const me = App.me(), date = el.dataset.date, deskId = el.dataset.desk;
   if (!Rules.isFloating(me)) { const b = Rules.deskBooking(deskId, date); toast(b ? `${deskId} : ${fullName(userById(b.userId))}` : `${deskId} : libre`); return; }
   const b = Rules.deskBooking(deskId, date);
-  if (b && b.userId === me.id) { Rules.cancelBooking(me, date); commit(); toast(`Réservation du bureau ${deskId} annulée.`); return; }
+  if (b && b.userId === me.id) { Rules.cancelBooking(me, date); commit(); toast(`Réservation du poste ${Rules.deskLabel(deskId)} annulée.`); return; }
   const res = Rules.book(me, date, deskId);
   if (!res.ok) { toast(res.errors[0], 'ko'); return; }
-  commit(); toast(`Bureau ${deskId} réservé pour le ${D.fmtMed(date)}.`, 'ok');
+  commit(); toast(`Poste ${Rules.deskLabel(deskId)} réservé pour le ${D.fmtMed(date)}.`, 'ok');
 };
 Actions['goto-plan'] = el => { App.planDate = el.dataset.date; Modal.close(); App.render(); };

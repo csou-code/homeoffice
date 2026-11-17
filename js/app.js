@@ -1,7 +1,7 @@
 /* Point d'entrée : état de navigation et routage par ancre (#calendar, #admin/users…). */
 const App = {
   route: 'calendar', sub: null,
-  calMonth: null, planDate: null, teamWeek: null, teamFilter: 'all', reqScope: 'team', report: null,
+  calMonth: null, planDate: null, teamWeek: null, teamFilter: 'all', reqScope: 'team', report: null, planFind: null,
   dayForm: { special: false, reason: '', detail: '', lateReason: '' },
 
   me() { return S() && S().currentUserId ? userById(S().currentUserId) : null; },
